@@ -1,0 +1,35 @@
+name: SNYK SAST Scan
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  security_scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Install SNYK CLI
+        run: npm install -g snyk
+
+      - name: Authenticate with SNYK
+        run: snyk auth
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run SNYK SAST Scan
+        run: snyk test --all-projects --json > snyk_report.json
+
+      - name: Save Report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: snyk-report
+          path: ./snyk_report.json
