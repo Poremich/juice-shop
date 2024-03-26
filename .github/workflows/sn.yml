@@ -1,0 +1,39 @@
+name: Code Scanning
+
+on: [push]
+
+jobs:
+  code_scanning:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      # Snyk
+      - name: Install Snyk
+        run: npm install -g snyk
+
+      - name: Run Snyk
+        run: |
+          snyk auth 31aaab10-4ab6-42f4-888c-c3df31fb12d5
+          snyk test --json > snyk-report.json
+
+      # OWASP ZAP
+      - name: Install OWASP ZAP
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openjdk-11-jre-headless
+          wget https://github.com/zaproxy/zaproxy/releases/download/v2.11.0/ZAP_WEEKLY_D-2022-01-03.zip
+          unzip ZAP_WEEKLY_D-2022-01-03.zip
+          sudo ln -s "$(pwd)/ZAP_D-2022-01-03/zap.sh" /usr/local/bin/zap.sh
+
+      - name: Run OWASP ZAP
+        run: zap.sh -cmd -quickurl http://localhost:3000
+
+      # Upload Snyk Report as Artifact
+      - name: Upload Snyk Report as Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: snyk-report
+          path: snyk-report.json
