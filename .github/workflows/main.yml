@@ -1,0 +1,44 @@
+name: Security Scan
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  security_scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '14'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run OWASP ZAP Scan
+        run: |
+          npm run start &
+          sleep 20s
+          npm run zap-baseline
+
+      - name: Run NPM Audit
+        run: npm audit
+
+      - name: Run Node Security Platform
+        run: npm audit --parseable | sed -n '/^=== npm audit security report ===$/,$p' | grep -E '^\d+\s' | grep -v '=== ' | sed -e 's/ /@/' | xargs nsp check
+
+      - name: Run ESLint Security Scan
+        run: npm run eslint:scan
+
+      - name: Upload ZAP Scan Report
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: zap-scan-report
+          path: zap-report.html
