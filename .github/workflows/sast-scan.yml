@@ -1,0 +1,32 @@
+name: SAST Scan and Report
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  snyk-sast-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '14'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: SAST Scan with SNYK
+        run: npx snyk test --all-projects --json > snyk_report.json
+
+      - name: Upload SAST Report to SNYK
+        uses: snyk/actions/upload-sast-report@v1
+        with:
+          file: snyk_report.json
+          api-token: ${{ secrets.SNYK_API_TOKEN }}
