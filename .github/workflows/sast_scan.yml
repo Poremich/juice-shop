@@ -1,0 +1,46 @@
+name: SAST Scan
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  snyk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '14'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Snyk SAST Scan
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: npx snyk test --all-projects --all-sub-projects --severity-threshold=high
+
+      - name: Snyk Monitor
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: npx snyk monitor
+
+      - name: Snyk Generate Report
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: npx snyk-to-html --org=poremich --project=juice-shop --output=report.html
+
+      - name: Upload Report to SNYK
+        uses: actions/upload-artifact@v2
+        with:
+          name: snyk-report
+          path: report.html
