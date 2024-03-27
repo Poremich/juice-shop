@@ -1,0 +1,47 @@
+name: Snyk SAST Scan
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  snyk-sast:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '14'
+
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+
+      - name: Authenticate with SNYK
+        run: snyk auth 31aaab10-4ab6-42f4-888c-c3df31fb12d5
+
+      - name: Install project dependencies
+        run: npm install
+
+      - name: Run Snyk SAST Scan
+        run: snyk test --all-projects --severity-threshold=high --json > snyk-report.json
+
+      - name: Upload Snyk JSON Report
+        uses: actions/upload-artifact@v2
+        with:
+          name: snyk-report
+          path: snyk-report.json
+
+      - name: Send Snyk Report to SNYK
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          curl -X POST https://snyk.io/api/v1/reporting-bridge --header "Content-Type: application/json" --header "authorization: $SNYK_TOKEN" --data-binary "@snyk-report.json"
+
