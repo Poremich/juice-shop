@@ -1,0 +1,58 @@
+name: SNYK SAST Scan and Code Coverage
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  security_scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Install SNYK CLI
+        run: npm install -g snyk
+
+      - name: Authenticate with SNYK
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk auth $SNYK_TOKEN
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run SNYK SAST Scan
+        run: |
+          snyk test --all-projects --json > snyk_report.json
+          exit_code=$?
+          if [ $exit_code != 0 ]; then
+            echo "SNYK SAST scan failed with exit code $exit_code"
+            exit $exit_code
+          fi
+
+      - name: Save SNYK Report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: snyk-report
+          path: ./snyk_report.json
+
+      - name: Check if lcov.info exists
+        run: |
+          if [ -f "build/reports/coverage/api-tests/lcov.info" ]; then
+            cp build/reports/coverage/api-tests/lcov.info api-lcov.info
+          else
+            echo "lcov.info file does not exist."
+          fi
+
+      - name: Save Code Coverage Report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: code-coverage
+          path: ./api-lcov.info
